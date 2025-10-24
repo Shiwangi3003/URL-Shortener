@@ -35,7 +35,7 @@ def get_shortened_url(req: str):
 
     return JSONResponse({
         "message" : "Short URL created",
-        "New URL" : "http://127.0.0.1:8000/"+res
+        "New URL" : "https://url-shortener-2q3m.onrender.com/"+res
     })
     
 
