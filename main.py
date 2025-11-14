@@ -1,15 +1,21 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 import random
 import string
 from configuration import collection
 from database.schema import short_url, response_parser
+from fastapi.templating import Jinja2Templates
 
 val = ""
 val += string.ascii_letters
 val += string.digits
 
 app = FastAPI()
+templates = Jinja2Templates(directory="views")
+
+@app.get("/")
+def home_page(req: Request):
+    return templates.TemplateResponse("index.html",{"request": req})
 
 
 @app.get("/shorturl")
@@ -35,7 +41,7 @@ def get_shortened_url(req: str):
 
     return JSONResponse({
         "message" : "Short URL created",
-        "New URL" : "https://url-shortener-2q3m.onrender.com/"+res
+        "New URL" : "https://url-shortener-1-71r1.onrender.com/"+res
     })
     
 
