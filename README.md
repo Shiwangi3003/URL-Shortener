@@ -21,6 +21,14 @@ A simple Python-based web app to shorten long URLs into short, shareable links.
    pip install -r requirements.txt
    ```
 
+4. Configure the public URL used in generated short links by adding this to
+   your `.env` file:
+   ```env
+   BASE_URL=http://localhost:8000
+   ```
+   On Render, set `BASE_URL` to your deployed service URL, for example:
+   `https://your-service.onrender.com`.
+
 ## Usage
 Run the app:
 ```bash
