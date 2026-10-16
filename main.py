@@ -17,7 +17,11 @@ base_url = os.getenv("BASE_URL", "http://localhost:8000").rstrip("/")
 
 @app.get("/")
 def home_page(req: Request):
-    return templates.TemplateResponse("index.html", {"request": req})
+    return templates.TemplateResponse(
+        request=req,
+        name="index.html",
+        context={}
+    )
 
 
 @app.post("/shorturl")
@@ -26,7 +30,6 @@ def get_shortened_url(req: str):
 
     data = collection.find()
     data = response_parser(data) 
-    # data is in BSON(Binary JSON) format in Mongodb that is not operatable so we need to parse it into JSON format
 
     for i in data:
         if i["lurl"] == req:

@@ -73,6 +73,97 @@
             opacity: 0.9;
         }
 
+        .shortener-form {
+            display: flex;
+            gap: 10px;
+            max-width: 700px;
+            margin: 30px auto 0;
+        }
+
+        .shortener-form input {
+            flex: 1;
+            min-width: 0;
+            padding: 15px 16px;
+            border: 0;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        .shortener-form button {
+            padding: 15px 22px;
+            border: 0;
+            border-radius: 6px;
+            background: #001F54;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .shortener-form button:disabled {
+            cursor: wait;
+            opacity: 0.7;
+        }
+
+        #result {
+            min-height: 24px;
+            margin-top: 18px;
+            overflow-wrap: anywhere;
+        }
+
+        #result a {
+            color: white;
+            font-weight: 600;
+        }
+
+        .result-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            max-width: 100%;
+        }
+
+        .copy-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 38px;
+            height: 38px;
+            border: 1px solid rgba(255, 255, 255, 0.75);
+            border-radius: 6px;
+            background: rgba(0, 31, 84, 0.35);
+            color: white;
+            cursor: pointer;
+        }
+
+        .copy-button:hover {
+            background: #001F54;
+        }
+
+        .copy-button:focus-visible {
+            outline: 3px solid white;
+            outline-offset: 2px;
+        }
+
+        @media (max-width: 600px) {
+            .hero { padding: 70px 20px; }
+            .hero h1 { font-size: 36px; }
+            .shortener-form { flex-direction: column; }
+        }
+
         /* CONTENT SECTION */
         .content {
             padding: 60px 8%;
@@ -124,6 +215,12 @@
     <section class="hero">
         <h1>Welcome to the URL Shortener</h1>
         <p>Simplify your long URLs instantly. Fast, secure, and easy to use!</p>
+        <form class="shortener-form" id="shortener-form">
+            <label for="long-url" class="visually-hidden">Long URL</label>
+            <input id="long-url" name="url" type="url" placeholder="https://example.com/your/long/url" required>
+            <button type="submit">Shorten URL</button>
+        </form>
+        <p id="result" role="status" aria-live="polite"></p>
     </section>
 
     <!-- MAIN CONTENT -->
@@ -141,5 +238,80 @@
         <p>Made with ❤️ for fast and simple link management.</p>
     </footer>
 
+<script>
+    const form = document.getElementById("shortener-form");
+    const urlInput = document.getElementById("long-url");
+    const result = document.getElementById("result");
+    const submitButton = form.querySelector("button[type='submit']");
+
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        result.textContent = "Creating your short link…";
+        submitButton.disabled = true;
+
+        try {
+            const response = await fetch(`/shorturl?req=${encodeURIComponent(urlInput.value.trim())}`, {
+                method: "POST"
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.detail || data.message || "Could not shorten this URL.");
+            }
+
+            const linkContainer = document.createElement("span");
+            linkContainer.className = "result-link";
+
+            const link = document.createElement("a");
+            link.href = data.short_url;
+            link.textContent = data.short_url;
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+
+            const copyButton = document.createElement("button");
+            copyButton.type = "button";
+            copyButton.className = "copy-button";
+            copyButton.setAttribute("aria-label", "Copy short URL");
+            copyButton.title = "Copy short URL";
+            copyButton.innerHTML = '<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="13" height="13" rx="2"></rect><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"></path></svg>';
+            copyButton.addEventListener("click", async () => {
+                try {
+                    if (navigator.clipboard && window.isSecureContext) {
+                        await navigator.clipboard.writeText(data.short_url);
+                    } else {
+                        const temporaryInput = document.createElement("textarea");
+                        temporaryInput.value = data.short_url;
+                        temporaryInput.setAttribute("readonly", "");
+                        temporaryInput.style.position = "fixed";
+                        temporaryInput.style.opacity = "0";
+                        document.body.appendChild(temporaryInput);
+                        temporaryInput.select();
+                        const copied = document.execCommand("copy");
+                        temporaryInput.remove();
+                        if (!copied) throw new Error("Copy command failed");
+                    }
+                    copyButton.setAttribute("aria-label", "Short URL copied");
+                    copyButton.title = "Copied!";
+                    result.setAttribute("aria-label", "Short URL copied to clipboard");
+                    setTimeout(() => {
+                        copyButton.setAttribute("aria-label", "Copy short URL");
+                        copyButton.title = "Copy short URL";
+                        result.removeAttribute("aria-label");
+                    }, 2000);
+                } catch (error) {
+                    result.setAttribute("aria-label", "Could not copy short URL");
+                    copyButton.title = "Could not copy. Select the link to copy it manually.";
+                }
+            });
+
+            linkContainer.append(link, copyButton);
+            result.replaceChildren(document.createTextNode(`${data.message}: `), linkContainer);
+        } catch (error) {
+            result.textContent = error.message || "Something went wrong. Please try again.";
+        } finally {
+            submitButton.disabled = false;
+        }
+    });
+</script>
 </body>
 </html>
